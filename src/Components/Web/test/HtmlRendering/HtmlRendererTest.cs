@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Text;
+using Microsoft.AspNetCore.Components.Infrastructure;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Sections;
 using Microsoft.AspNetCore.Components.Web;
@@ -980,6 +981,66 @@ public class HtmlRendererTest
             });
             Assert.Equal("async", ex.Message);
         });
+    }
+
+    [Fact]
+    public async Task PersistComponentStateAsync_PassesThroughCall()
+    {
+        // Arrange
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton<ComponentStatePersistenceManager>()
+            .AddSingleton(sp => sp.GetRequiredService<ComponentStatePersistenceManager>().State)
+            .BuildServiceProvider();
+
+        var htmlRenderer = GetHtmlRenderer(services);
+        await htmlRenderer.Dispatcher.InvokeAsync(() =>
+            htmlRenderer.RenderComponentAsync(typeof(StatePersistingComponent)));
+
+        // Act
+        var store = new TestComponentStateStore();
+        await htmlRenderer.PersistComponentStateAsync(store);
+
+        // Assert
+        Assert.NotNull(store.SuppliedState);
+        Assert.Equal("\"my value\"", Encoding.UTF8.GetString(store.SuppliedState["my key"]));
+    }
+
+    class TestComponentStateStore : IPersistentComponentStateStore
+    {
+        public IReadOnlyDictionary<string, byte[]> SuppliedState { get; private set; }
+
+        public Task<IDictionary<string, byte[]>> GetPersistedStateAsync() => throw new NotImplementedException();
+
+        public Task PersistStateAsync(IReadOnlyDictionary<string, byte[]> state)
+        {
+            if (SuppliedState is not null)
+            {
+                throw new InvalidOperationException("Did not expect multiple calls");
+            }
+
+            SuppliedState = state;
+            return Task.CompletedTask;
+        }
+    }
+
+    class StatePersistingComponent : ComponentBase, IDisposable
+    {
+        [Inject] public PersistentComponentState ApplicationState { get; set; }
+
+        private PersistingComponentStateSubscription persistingSubscription;
+
+        protected override void OnInitialized()
+        {
+            persistingSubscription = ApplicationState.RegisterOnPersisting(() =>
+            {
+                ApplicationState.PersistAsJson("my key", "my value");
+                return Task.CompletedTask;
+            });
+        }
+
+        public void Dispose()
+            => persistingSubscription.Dispose();
     }
 
     void AssertHtmlContentEquals(IEnumerable<string> expected, HtmlComponent actual)

@@ -48,7 +48,6 @@ public class PersistComponentStateTagHelper : TagHelper
         ArgumentNullException.ThrowIfNull(output);
 
         var services = ViewContext.HttpContext.RequestServices;
-        var manager = services.GetRequiredService<ComponentStatePersistenceManager>();
         var renderer = services.GetRequiredService<HtmlRenderer>();
         var store = PersistenceMode switch
         {
@@ -76,7 +75,7 @@ public class PersistComponentStateTagHelper : TagHelper
         output.TagName = null;
         if (store != null)
         {
-            await manager.PersistStateAsync(store, renderer.Dispatcher);
+            await renderer.PersistComponentStateAsync(store);
             output.Content.SetHtmlContent(
                 new HtmlContentBuilder()
                     .AppendHtml("<!--Blazor-Component-State:")

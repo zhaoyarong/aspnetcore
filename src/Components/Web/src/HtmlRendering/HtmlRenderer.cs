@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components.HtmlRendering;
+using Microsoft.AspNetCore.Components.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +14,7 @@ namespace Microsoft.AspNetCore.Components.Web;
 /// </summary>
 public sealed class HtmlRenderer : IDisposable, IAsyncDisposable
 {
+    private readonly IServiceProvider _services;
     private readonly HtmlRendererCore _passiveHtmlRenderer;
 
     /// <summary>
@@ -23,6 +25,7 @@ public sealed class HtmlRenderer : IDisposable, IAsyncDisposable
     public HtmlRenderer(IServiceProvider services, ILoggerFactory loggerFactory)
     {
         var componentActivator = services.GetService<IComponentActivator>() ?? DefaultComponentActivator.Instance;
+        _services = services;
         _passiveHtmlRenderer = new HtmlRendererCore(services, loggerFactory, componentActivator);
     }
 
@@ -135,5 +138,21 @@ public sealed class HtmlRenderer : IDisposable, IAsyncDisposable
         var content = BeginRenderingComponent(componentType, parameters);
         await content.WaitForQuiescenceAsync();
         return content;
+    }
+
+    /// <summary>
+    /// Persists the component application state into the given <see cref="IPersistentComponentStateStore"/>.
+    /// </summary>
+    /// <param name="store">The <see cref="IPersistentComponentStateStore"/> to persist the state into.</param>
+    /// <returns>A <see cref="Task"/> that will complete when the state has been persisted.</returns>
+    public Task PersistComponentStateAsync(IPersistentComponentStateStore store)
+    {
+        // TODO: I don't think this is a good thing because, in class library scenarios, people aren't going to have
+        // ComponentStatePersistenceManager in their DI container, and we don't even want them to add it manually
+        // as it's in .Infrastructure. We'd probably have to start telling everyone to call some new IServiceCollection
+        // extension method to register "required services" which is a bit lame because today we don't require any
+        // manadatory services besides logging.
+        var manager = _services.GetRequiredService<ComponentStatePersistenceManager>();
+        return manager.PersistStateAsync(store, _passiveHtmlRenderer);
     }
 }
