@@ -26,6 +26,7 @@ public partial class Router : IComponent, IHandleAfterRender, IDisposable
     bool _navigationInterceptionEnabled;
     ILogger<Router> _logger;
 
+    private Type? _updateScrollPositionForHashLastHandlerType;
     private bool _updateScrollPositionForHash;
 
     private CancellationTokenSource _onNavigateCts;
@@ -208,7 +209,13 @@ public partial class Router : IComponent, IHandleAfterRender, IDisposable
                 context.Handler,
                 context.Parameters ?? _emptyParametersDictionary);
             _renderHandle.Render(Found(routeData));
-            _updateScrollPositionForHash = true;
+
+            // If you navigate to a different page, then after the next render we'll update the scroll position
+            if (context.Handler != _updateScrollPositionForHashLastHandlerType)
+            {
+                _updateScrollPositionForHashLastHandlerType = context.Handler;
+                _updateScrollPositionForHash = true;
+            }
         }
         else
         {
