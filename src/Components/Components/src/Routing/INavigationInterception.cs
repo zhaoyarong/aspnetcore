@@ -13,4 +13,6 @@ public interface INavigationInterception
     /// </summary>
     /// <returns>A <see cref="Task" /> that represents the asynchronous operation.</returns>
     Task EnableNavigationInterceptionAsync();
+
+    Task RefreshScrollPositionForHash() => Task.CompletedTask;
 }

@@ -22,12 +22,17 @@ let resolveCurrentNavigation: ((shouldContinueNavigation: boolean) => void) | nu
 export const internalFunctions = {
   listenForNavigationEvents,
   enableNavigationInterception,
+  refreshScrollPositionForHash,
   setHasLocationChangingListeners,
   endLocationChanging,
   navigateTo: navigateToFromDotNet,
   getBaseURI: (): string => document.baseURI,
   getLocationHref: (): string => location.href,
 };
+
+function refreshScrollPositionForHash() {
+  // TODO: Scroll here
+}
 
 function listenForNavigationEvents(
   locationChangedCallback: (uri: string, state: string | undefined, intercepted: boolean) => Promise<void>,
