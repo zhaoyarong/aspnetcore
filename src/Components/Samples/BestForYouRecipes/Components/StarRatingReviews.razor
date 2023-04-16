@@ -29,6 +29,9 @@
     [Parameter, EditorRequired]
     public IList<Review> Reviews { get; set; } = default!;
 
+    //[SupplyParameterFromForm]
+    //public Review Review { get; set; }
+
     [Parameter]
     public EventCallback<Review> OnSubmitReview { get; set; }
 
