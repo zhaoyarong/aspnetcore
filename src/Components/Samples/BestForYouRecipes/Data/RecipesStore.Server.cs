@@ -28,9 +28,6 @@ public class RecipesStore : IRecipesStore
 
     public async Task<IEnumerable<Recipe>> GetRecipes(string? query)
     {
-        // Simulate DB slowness
-        await Task.Delay(1000);
-
         return string.IsNullOrWhiteSpace(query)
             ? recipes.Values
             : searchProvider.Search(query);
