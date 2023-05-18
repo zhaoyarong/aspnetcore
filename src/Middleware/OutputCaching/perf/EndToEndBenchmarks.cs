@@ -63,13 +63,13 @@ public class EndToEndBenchmarks
         headers.RequestId = Key;
 
         // store, fetch, validate (for each impl)
-        await OCS_StreamSync();
+        await StreamSync();
         await ReadAsync(true);
 
-        await OCS_StreamAsync();
+        await StreamAsync();
         await ReadAsync(true);
 
-        await OCS_WriterAsync();
+        await WriterAsync();
         await ReadAsync(true);
     }
 
@@ -113,8 +113,8 @@ public class EndToEndBenchmarks
         await destination.FlushAsync(cancellationToken);
     }
 
-    [Benchmark, BenchmarkCategory("Write_OutputCacheStream")]
-    public async Task OCS_StreamSync()
+    [Benchmark(Description = "StreamSync"), BenchmarkCategory("Write")]
+    public async Task StreamSync()
     {
         CachedResponseBody body;
         using (var oc = new OutputCacheStream(Stream.Null, _options.MaximumBodySize, StreamUtilities.BodySegmentSize, _noop))
@@ -133,8 +133,8 @@ public class EndToEndBenchmarks
         await OutputCacheEntryFormatter.StoreAsync(Key, entry, _options.DefaultExpirationTimeSpan, _store, CancellationToken.None);
     }
 
-    [Benchmark, BenchmarkCategory("Write_OutputCacheStream")]
-    public async Task OCS_StreamAsync()
+    [Benchmark(Description = "StreamAsync"), BenchmarkCategory("Write")]
+    public async Task StreamAsync()
     {
         CachedResponseBody body;
         using (var oc = new OutputCacheStream(Stream.Null, _options.MaximumBodySize, StreamUtilities.BodySegmentSize, _noop))
@@ -154,8 +154,8 @@ public class EndToEndBenchmarks
         await OutputCacheEntryFormatter.StoreAsync(Key, entry, _options.DefaultExpirationTimeSpan, _store, CancellationToken.None);
     }
 
-    [Benchmark, BenchmarkCategory("Write_OutputCacheStream")]
-    public async Task OCS_WriterAsync()
+    [Benchmark(Description = "BodyWriter"), BenchmarkCategory("Write")]
+    public async Task WriterAsync()
     {
         CachedResponseBody body;
         using (var oc = new OutputCacheStream(Stream.Null, _options.MaximumBodySize, StreamUtilities.BodySegmentSize, _noop))
