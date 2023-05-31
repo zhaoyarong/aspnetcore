@@ -1,0 +1,10 @@
+﻿Microsoft.Extensions.Caching.Distributed.IDistributedCache<T>
+Microsoft.Extensions.Caching.Distributed.IDistributedCache<T>.GetAsync(string! key, System.Threading.CancellationToken token = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<T?>
+Microsoft.Extensions.Caching.Distributed.IDistributedCache<T>.RefreshAsync(string! key, System.Threading.CancellationToken token = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Microsoft.Extensions.Caching.Distributed.IDistributedCache<T>.RemoveAsync(string! key, System.Threading.CancellationToken token = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Microsoft.Extensions.Caching.Distributed.IDistributedCache<T>.SetAsync(string! key, T! value, Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions? options = null, System.Threading.CancellationToken token = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Microsoft.Extensions.Caching.Distributed.IDistributedCacheFactory
+Microsoft.Extensions.Caching.Distributed.IDistributedCacheFactory.CreateDistributedCache<T>() -> Microsoft.Extensions.Caching.Distributed.IDistributedCache<T!>!
+Microsoft.Extensions.Caching.Distributed.IDistributedCacheSerializer<T>
+Microsoft.Extensions.Caching.Distributed.IDistributedCacheSerializer<T>.Deserialize(in System.Buffers.ReadOnlySequence<byte> source) -> T?
+Microsoft.Extensions.Caching.Distributed.IDistributedCacheSerializer<T>.Serialize(T! value, System.Buffers.IBufferWriter<byte>! destination) -> void
