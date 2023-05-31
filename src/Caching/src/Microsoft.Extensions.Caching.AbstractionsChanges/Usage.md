@@ -20,7 +20,7 @@ Key topics:
 Additional things planned for consideration:
 
 - look at the `IDistributedCache` API shape - currently `byte[]`-based
-- - look at two-tier cache, for example redis "server-assisted client-side caching" (https://redis.io/docs/manual/client-side-caching/)
+- look at two-tier cache, for example redis "server-assisted client-side caching" (https://redis.io/docs/manual/client-side-caching/)
 
 Full example (lines with ** are key):
 
