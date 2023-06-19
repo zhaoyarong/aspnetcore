@@ -43,13 +43,15 @@ public partial class FetchDataCore
     [Microsoft.AspNetCore.Components.Inject]
     private HttpClient? _generated_HttpClient { get; set; }
 
-    private Task<WeatherForecast[]> GetForecastAsync(DateTime startDate)
+    private async Task<WeatherForecast[]> GetForecastAsync(DateTime startDate)
     {
         var param_startDate = System.Uri.EscapeDataString(
             System.Text.Json.JsonSerializer.Serialize(startDate));
-        return System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<WeatherForecast[]>(
+
+        return await System.Net.Http.Json.HttpClientJsonExtensions.GetFromJsonAsync<WeatherForecast[]>(
             _generated_HttpClient!,
-            $"fetchdata/api/GetForecastAsync?startDate={param_startDate}");
+            $"fetchdata/api/GetForecastAsync?startDate={param_startDate}")
+            ?? Array.Empty<WeatherForecast>();
     }
 #endif
 }

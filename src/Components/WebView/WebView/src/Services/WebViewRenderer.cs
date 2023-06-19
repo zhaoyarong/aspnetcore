@@ -76,6 +76,11 @@ internal sealed class WebViewRenderer : WebRenderer
         nextUnacknowledgedBatch.CompletionSource.SetResult();
     }
 
+    protected override Task ActivatePrerenderedComponentsAsync()
+    {
+        throw new NotImplementedException();
+    }
+
     private sealed record UnacknowledgedRenderBatch
     {
         public long BatchId { get; init; }

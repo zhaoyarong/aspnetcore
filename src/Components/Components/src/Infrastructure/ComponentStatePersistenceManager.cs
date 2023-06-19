@@ -11,7 +11,11 @@ namespace Microsoft.AspNetCore.Components.Infrastructure;
 /// </summary>
 public class ComponentStatePersistenceManager
 {
+#pragma warning disable IDE0044 // Add readonly modifier
+#pragma warning disable CS0649 // Field is never assigned to
     private bool _stateIsPersisted;
+#pragma warning disable CS0649 // Field is never assigned to
+#pragma warning restore IDE0044 // Add readonly modifier
     private readonly List<Func<Task>> _pauseCallbacks = new();
     private readonly Dictionary<string, byte[]> _currentState = new(StringComparer.Ordinal);
     private readonly ILogger<ComponentStatePersistenceManager> _logger;

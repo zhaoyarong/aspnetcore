@@ -33,6 +33,7 @@ Microsoft.AspNetCore.Components.Routing.LocationChangingContext.PreventNavigatio
 Microsoft.AspNetCore.Components.Routing.LocationChangingContext.TargetLocation.get -> string!
 Microsoft.AspNetCore.Components.Routing.LocationChangingContext.TargetLocation.init -> void
 Microsoft.AspNetCore.Components.StreamRenderingAttribute
+Microsoft.AspNetCore.Components.StreamRenderingAttribute.StreamRendering.get -> bool
 Microsoft.AspNetCore.Components.StreamRenderingAttribute.StreamRenderingAttribute(bool streamRendering) -> void
 Microsoft.AspNetCore.Components.SupplyParameterFromFormAttribute
 Microsoft.AspNetCore.Components.SupplyParameterFromFormAttribute.Name.get -> string?
