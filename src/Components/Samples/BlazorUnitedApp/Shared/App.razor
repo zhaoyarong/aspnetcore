@@ -1,0 +1,28 @@
+﻿<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+    <main>
+        <div class="top-row px-4">
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+        </div>
+        <article class="content px-4">
+            <Router AppAssembly="@typeof(Program).Assembly">
+                <Found Context="routeData">
+                    <RouteView RouteData="@routeData" />
+                    <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                </Found>
+                <NotFound>
+                    <PageTitle>Not found</PageTitle>
+                    <p role="alert">Sorry, there's nothing at this address.</p>
+                </NotFound>
+            </Router>
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>

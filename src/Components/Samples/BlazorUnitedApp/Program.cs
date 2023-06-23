@@ -7,7 +7,7 @@ using BlazorUnitedApp.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorComponents();
+builder.Services.AddRazorComponents().AddServerComponents();
 
 builder.Services.AddSingleton<WeatherForecastService>();
 
@@ -27,6 +27,6 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.MapRazorComponents<App>();
+app.MapRazorComponents<AppHost>().AddServerRenderMode();
 
 app.Run();
