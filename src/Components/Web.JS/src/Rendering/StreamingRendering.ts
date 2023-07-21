@@ -4,7 +4,7 @@
 import { SsrStartOptions } from '../Platform/SsrStartOptions';
 import { NavigationEnhancementCallbacks, performEnhancedPageLoad, replaceDocumentWithPlainText } from '../Services/NavigationEnhancement';
 import { isWithinBaseUriSpace } from '../Services/NavigationUtils';
-import { synchronizeDomContent } from './DomMerging/DomSync';
+import { synchronizeDomContentAndUpdateInteractiveComponents } from './SSRInteractiveComponents';
 
 let enableDomPreservation = true;
 let navigationEnhancementCallbacks: NavigationEnhancementCallbacks;
@@ -69,7 +69,7 @@ function insertStreamingContentIntoDocument(componentIdAsString: string, docFrag
   if (markers) {
     const { startMarker, endMarker } = markers;
     if (enableDomPreservation) {
-      synchronizeDomContent({ startExclusive: startMarker, endExclusive: endMarker }, docFrag);
+      synchronizeDomContentAndUpdateInteractiveComponents({ startExclusive: startMarker, endExclusive: endMarker }, docFrag);
     } else {
       // In this mode we completely delete the old content before inserting the new content
       const destinationRoot = endMarker.parentNode!;

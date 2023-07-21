@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-import { synchronizeDomContent } from '../Rendering/DomMerging/DomSync';
+import { synchronizeDomContentAndUpdateInteractiveComponents } from '../Rendering/SSRInteractiveComponents';
 import { handleClickForNavigationInterception, hasInteractiveRouter } from './NavigationUtils';
 
 /*
@@ -135,7 +135,7 @@ export async function performEnhancedPageLoad(internalDestinationHref: string, f
       if (responseContentType?.startsWith('text/html') && initialContent) {
         // For HTML responses, regardless of the status code, display it
         const parsedHtml = new DOMParser().parseFromString(initialContent, 'text/html');
-        synchronizeDomContent(document, parsedHtml);
+        synchronizeDomContentAndUpdateInteractiveComponents(document, parsedHtml);
         navigationEnhancementCallbacks.documentUpdated();
       } else if (responseContentType?.startsWith('text/') && initialContent) {
         // For any other text-based content, we'll just display it, because that's what

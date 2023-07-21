@@ -1,4 +1,5 @@
 import { ComponentDescriptor, ServerComponentDescriptor, WebAssemblyComponentDescriptor, discoverComponents } from '../Services/ComponentDescriptorDiscovery';
+import { CommentBoundedRange, synchronizeDomContent, toINodeRange } from './DomMerging/DomSync';
 import { LogicalElement, getLogicalRootDescriptor, toLogicalRootCommentElement } from './LogicalElements';
 
 let descriptorHandler: (descriptor: ComponentDescriptor) => void | undefined;
@@ -13,6 +14,10 @@ export function registerAllComponentDescriptors(root: Node) {
   for (const descriptor of descriptors) {
     descriptorHandler(descriptor);
   }
+}
+
+export function synchronizeDomContentAndUpdateInteractiveComponents(destination: CommentBoundedRange | Node, newContent: Node) {
+  synchronizeDomContent(toINodeRange(destination), toINodeRange(newContent));
 }
 
 function upgradeComponentCommentsToLogicalRootComments(root: Node): ComponentDescriptor[] {

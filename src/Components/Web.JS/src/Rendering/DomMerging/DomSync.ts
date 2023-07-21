@@ -5,34 +5,108 @@ import { applyAnyDeferredValue } from '../DomSpecialPropertyUtil';
 import { synchronizeAttributes } from './AttributeSync';
 import { UpdateCost, ItemList, Operation, computeEditScript } from './EditScript';
 
-export function synchronizeDomContent(destination: CommentBoundedRange | Node, newContent: Node) {
-  let destinationParent: Node;
-  let nextDestinationNode: Node | null;
-  let originalNodesForDiff: ItemList<Node>;
+interface INode {
+  readonly nodeType: number;
+  textContent: string | null;
+}
 
-  // Figure out how to interpret the 'destination' parameter, since it can come in two very different forms
-  if (destination instanceof Node) {
-    destinationParent = destination;
-    nextDestinationNode = destination.firstChild;
-    originalNodesForDiff = destination.childNodes;
-  } else {
-    destinationParent = destination.startExclusive.parentNode!;
-    nextDestinationNode = destination.startExclusive.nextSibling;
-    originalNodesForDiff = new SiblingSubsetNodeList(destination);
+interface INodeRange extends Iterable<INode> {
+  insertBefore(nodeToInsert: INode, beforeExistingNode: INode | null): void;
+  remove(node: INode): void;
+}
+
+class NodeIterator implements Iterator<INode, null> {
+  private nextVal: Node | null;
+  constructor(parent: Node) {
+    this.nextVal = parent.firstChild;
   }
+  next(): IteratorResult<INode, null> {
+    const result = this.nextVal;
+    this.nextVal = this.nextVal?.nextSibling || null;
+    return result ? { value: result, done: false } : { value: null, done: true };
+  }
+}
 
+class CommentBoundedRangeIterator implements Iterator<INode, null> {
+  private nextVal: Node;
+  private endMarker: Comment;
+  constructor(range: CommentBoundedRange) {
+    this.nextVal = range.startExclusive.nextSibling!;
+    this.endMarker = range.endExclusive;
+  }
+  next(): IteratorResult<INode, null> {
+    if (this.nextVal === this.endMarker) {
+      return { value: null, done: true };
+    } else {
+      const result = this.nextVal!;
+      this.nextVal = result.nextSibling!;
+      return { value: result, done: false };
+    }
+  }
+}
+
+export function toINodeRange(container: CommentBoundedRange | Node): INodeRange {
+  if (container instanceof Node) {
+    return {
+      [Symbol.iterator](): Iterator<INode, null> {
+        return new NodeIterator(container);
+      },
+      remove(node) {
+        container.removeChild(node as Node);
+      },
+      insertBefore(node, before) {
+        container.insertBefore(node as Node, before as Node);
+      }
+    };
+  } else {
+    return {
+      [Symbol.iterator](): Iterator<INode, null> {
+        return new CommentBoundedRangeIterator(container);
+      },
+      remove(node) {
+        container.startExclusive.parentNode!.removeChild(node as Node);
+      },
+      insertBefore(node, before) {
+        container.startExclusive.parentNode!.insertBefore(node as Node, (before as Node || container.endExclusive));
+      }
+    }
+  }
+}
+
+function toItemList(range: INodeRange): ItemList<INode> {
+  const allNodes: INode[] = [];
+  for (const x of range) {
+    allNodes.push(x);
+  }
+  return new ArrayItemList(allNodes);
+}
+
+export function synchronizeDomContent(destination: INodeRange | CommentBoundedRange | Node, newContent: INodeRange | Node) {
+  if (destination instanceof Node || (destination as CommentBoundedRange).startExclusive) {
+    destination = toINodeRange(destination as CommentBoundedRange | Node);
+  }
+  if (newContent instanceof Node) {
+    newContent = toINodeRange(newContent);
+  }
+  synchronizeDomContentCore(destination as INodeRange, newContent as INodeRange);
+}
+
+export function synchronizeDomContentCore(destination: INodeRange, newContent: INodeRange) {
   // Run the diff
   const editScript = computeEditScript(
-    originalNodesForDiff,
-    newContent.childNodes,
+    toItemList(destination),
+    toItemList(newContent),
     domNodeComparer);
 
   // Handle any common leading items
-  let nextNewContentNode = newContent.firstChild; // Could be null
+  let destinationIterator = destination[Symbol.iterator]() as Iterator<INode, null>;
+  let newContentIterator = newContent[Symbol.iterator]() as Iterator<INode, null>;
+  let nextDestinationNode = destinationIterator.next().value;
+  let nextNewContentNode = newContentIterator.next().value;
   for (let i = 0; i < editScript.skipCount; i++) {
     treatAsMatch(nextDestinationNode!, nextNewContentNode!);
-    nextDestinationNode = nextDestinationNode!.nextSibling!;
-    nextNewContentNode = nextNewContentNode!.nextSibling;
+    nextDestinationNode = destinationIterator.next().value;
+    nextNewContentNode = newContentIterator.next().value;
   }
 
   // Handle any edited region
@@ -45,23 +119,23 @@ export function synchronizeDomContent(destination: CommentBoundedRange | Node, n
       switch (operation) {
         case Operation.Keep:
           treatAsMatch(nextDestinationNode!, nextNewContentNode!);
-          nextDestinationNode = nextDestinationNode!.nextSibling;
-          nextNewContentNode = nextNewContentNode!.nextSibling;
+          nextDestinationNode = destinationIterator.next().value;
+          nextNewContentNode = newContentIterator.next().value;
           break;
         case Operation.Update:
           treatAsSubstitution(nextDestinationNode!, nextNewContentNode!);
-          nextDestinationNode = nextDestinationNode!.nextSibling;
-          nextNewContentNode = nextNewContentNode!.nextSibling;
+          nextDestinationNode = destinationIterator.next().value;
+          nextNewContentNode = newContentIterator.next().value;
           break;
         case Operation.Delete:
           const nodeToRemove = nextDestinationNode!;
-          nextDestinationNode = nodeToRemove.nextSibling;
-          destinationParent.removeChild(nodeToRemove);
+          nextDestinationNode = destinationIterator.next().value;
+          destination.remove(nodeToRemove);
           break;
         case Operation.Insert:
           const nodeToInsert = nextNewContentNode!;
-          nextNewContentNode = nodeToInsert.nextSibling;
-          destinationParent.insertBefore(nodeToInsert, nextDestinationNode);
+          nextNewContentNode = newContentIterator.next().value;
+          destination.insertBefore(nodeToInsert, nextDestinationNode);
           break;
         default:
           throw new Error(`Unexpected operation: '${operation}'`);
@@ -70,13 +144,13 @@ export function synchronizeDomContent(destination: CommentBoundedRange | Node, n
 
     // Handle any common trailing items
     // These can only exist if there were some edits, otherwise everything would be in the set of common leading items
-    const endAtNodeExclOrNull = destination instanceof Node ? null : destination.endExclusive;
-    while (nextDestinationNode !== endAtNodeExclOrNull) {
+    while (nextDestinationNode) {
       treatAsMatch(nextDestinationNode!, nextNewContentNode!);
-      nextDestinationNode = nextDestinationNode!.nextSibling;
-      nextNewContentNode = nextNewContentNode!.nextSibling;
+      nextDestinationNode = destinationIterator.next().value;
+      nextNewContentNode = newContentIterator.next().value;
     }
-    if (nextNewContentNode) {
+
+    if (nextNewContentNode || nextDestinationNode) {
       // Should never be possible, as it would imply a bug in the edit script calculation, or possibly an unsupported
       // scenario like a DOM mutation observer modifying the destination nodes while we are working on them
       throw new Error('Updating the DOM failed because the sets of trailing nodes had inconsistent lengths.');
@@ -84,7 +158,7 @@ export function synchronizeDomContent(destination: CommentBoundedRange | Node, n
   }
 }
 
-function treatAsMatch(destination: Node, source: Node) {
+function treatAsMatch(destination: INode, source: INode) {
   switch (destination.nodeType) {
     case Node.TEXT_NODE:
     case Node.COMMENT_NODE:
@@ -93,7 +167,7 @@ function treatAsMatch(destination: Node, source: Node) {
       const editableElementValue = getEditableElementValue(source as Element);
       synchronizeAttributes(destination as Element, source as Element);
       applyAnyDeferredValue(destination as Element);
-      synchronizeDomContent(destination as Element, source as Element);
+      synchronizeDomContentCore(toINodeRange(destination as Element), toINodeRange(source as Element));
 
       // This is a much simpler alternative to the deferred-value-assignment logic we use in interactive rendering.
       // Because this sync algorithm goes depth-first, we know all the attributes and descendants are fully in sync
@@ -111,7 +185,7 @@ function treatAsMatch(destination: Node, source: Node) {
   }
 }
 
-function treatAsSubstitution(destination: Node, source: Node) {
+function treatAsSubstitution(destination: INode, source: INode) {
   switch (destination.nodeType) {
     case Node.TEXT_NODE:
     case Node.COMMENT_NODE:
@@ -122,7 +196,7 @@ function treatAsSubstitution(destination: Node, source: Node) {
   }
 }
 
-function domNodeComparer(a: Node, b: Node): UpdateCost {
+function domNodeComparer(a: INode, b: INode): UpdateCost {
   if (a.nodeType !== b.nodeType) {
     return UpdateCost.Infinite;
   }
@@ -183,31 +257,18 @@ export interface CommentBoundedRange {
   endExclusive: Comment,
 }
 
-class SiblingSubsetNodeList implements ItemList<Node> {
-  private readonly siblings: NodeList;
-  private readonly startIndex: number;
-  private readonly endIndexExcl: number;
-
+// TODO: Instead of pre-evaluating the array, consider changing EditScript not to rely on random access to arbitrary indices
+class ArrayItemList<T> implements ItemList<T> {
+  constructor(private items: T[]) {
+    this.length = items.length;
+  }
   readonly length: number;
-
-  item(index: number): Node | null {
-    return this.siblings.item(this.startIndex + index);
+  item(index: number): T | null {
+    return this.items[index];
   }
-
-  forEach(callbackfn: (value: Node, key: number, parent: ItemList<Node>) => void, thisArg?: any): void {
+  forEach(callbackfn: (value: T, key: number, parent: ItemList<T>) => void, thisArg?: any): void {
     for (let i = 0; i < this.length; i++) {
-      callbackfn.call(thisArg, this.item(i)!, i, this);
+      callbackfn.call(thisArg, this.items[i]!, i, this);
     }
-  }
-
-  constructor(range: CommentBoundedRange) {
-    if (!range.startExclusive.parentNode || range.startExclusive.parentNode !== range.endExclusive.parentNode) {
-      throw new Error('Invalid CommentBoundedRange. The start and end markers have no common parent.');
-    }
-
-    this.siblings = range.startExclusive.parentNode!.childNodes;
-    this.startIndex = Array.prototype.indexOf.call(this.siblings, range.startExclusive) + 1;
-    this.endIndexExcl = Array.prototype.indexOf.call(this.siblings, range.endExclusive);
-    this.length = this.endIndexExcl - this.startIndex;
   }
 }
