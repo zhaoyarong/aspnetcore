@@ -1,6 +1,7 @@
 import { expect, test, describe } from '@jest/globals';
 import { synchronizeDomContent as synchronizeDomContentCore } from '../src/Rendering/DomMerging/DomSync';
-import { CommentBoundedRange, toINodeRange } from '../src/Rendering/DomMerging/NodeRange';
+import { CommentBoundedRange, LogicalNodeRangeIterator } from '../src/Rendering/SSRInteractiveComponents';
+import { INode, INodeRange } from '../src/Rendering/DomMerging/NodeRange';
 
 function synchronizeDomContent(destination: CommentBoundedRange | Node, newContent: Node) {
   synchronizeDomContentCore(toINodeRange(destination), toINodeRange(newContent));
@@ -598,4 +599,25 @@ function assertSameContentsByIdentity<T>(actual: T[], expected: T[]) {
   for (let i = 0; i < actual.length; i++) {
     expect(actual[i]).toBe(expected[i]);
   }
+}
+
+function toINodeRange(container: Node | CommentBoundedRange): INodeRange {
+  const parentNode = container instanceof Node ? container : container.startExclusive.parentNode!;
+  return {
+    [Symbol.iterator](): Iterator<INode, null> {
+      return new LogicalNodeRangeIterator(container);
+    },
+    remove(node) {
+      parentNode.removeChild(node as Node);
+    },
+    insertBefore(node, before) {
+      if (!before && !(container instanceof Node)) {
+        before = container.endExclusive;
+      }
+      parentNode.insertBefore(node as Node, before as Node);
+    },
+    getChildren(parent) {
+      return toINodeRange(parent as Node);
+    },
+  };
 }

@@ -47,6 +47,11 @@ export class RootComponentManager {
   }
 
   private async handleUpdatedRootComponentsCore(descriptors: Iterable<ComponentDescriptor>, addNewRootComponents: boolean) {
+    // TODO: We shouldn't really do this at all. This is looking at the descriptor list and trying to infer what kinds of updates are required,
+    // e.g., based on whether a descriptor's node is still in the document. So in effect it's another separate diffing pass. But we already have
+    // a diffing system that knows precisely what changes it made to the document. Rather than trying to keep all these independent things in
+    // sync, we should have the DOM diffing system trigger the relevant updates to the root components directly.
+
     if (!isRendererAttached(this._browserRendererId)) {
       // There's no attached renderer to update interactive root components, so we'll no-op.
       // An alternative would be to asynchronously wait for the renderer to attach before

@@ -4,7 +4,17 @@
 import { applyAnyDeferredValue } from '../DomSpecialPropertyUtil';
 import { synchronizeAttributes } from './AttributeSync';
 import { UpdateCost, ItemList, Operation, computeEditScript } from './EditScript';
-import { INode, INodeRange, toINodeRange } from './NodeRange';
+
+export interface INode {
+  readonly nodeType: number;
+  textContent: string | null;
+}
+
+export interface INodeRange extends Iterable<INode> {
+  insertBefore(nodeToInsert: INode, beforeExistingNode: INode | null): void;
+  remove(node: INode): void;
+  getChildren(parent: INode): INodeRange;
+}
 
 export function synchronizeDomContent(destination: INodeRange, newContent: INodeRange) {
   // Run the diff
@@ -19,7 +29,7 @@ export function synchronizeDomContent(destination: INodeRange, newContent: INode
   let nextDestinationNode = destinationIterator.next().value;
   let nextNewContentNode = newContentIterator.next().value;
   for (let i = 0; i < editScript.skipCount; i++) {
-    treatAsMatch(nextDestinationNode!, nextNewContentNode!);
+    treatAsMatch(nextDestinationNode!, nextNewContentNode!, destination.getChildren, newContent.getChildren);
     nextDestinationNode = destinationIterator.next().value;
     nextNewContentNode = newContentIterator.next().value;
   }
@@ -33,7 +43,7 @@ export function synchronizeDomContent(destination: INodeRange, newContent: INode
       const operation = edits[editIndex];
       switch (operation) {
         case Operation.Keep:
-          treatAsMatch(nextDestinationNode!, nextNewContentNode!);
+          treatAsMatch(nextDestinationNode!, nextNewContentNode!, destination.getChildren, newContent.getChildren);
           nextDestinationNode = destinationIterator.next().value;
           nextNewContentNode = newContentIterator.next().value;
           break;
@@ -60,7 +70,7 @@ export function synchronizeDomContent(destination: INodeRange, newContent: INode
     // Handle any common trailing items
     // These can only exist if there were some edits, otherwise everything would be in the set of common leading items
     while (nextDestinationNode) {
-      treatAsMatch(nextDestinationNode!, nextNewContentNode!);
+      treatAsMatch(nextDestinationNode!, nextNewContentNode!, destination.getChildren, newContent.getChildren);
       nextDestinationNode = destinationIterator.next().value;
       nextNewContentNode = newContentIterator.next().value;
     }
@@ -73,7 +83,7 @@ export function synchronizeDomContent(destination: INodeRange, newContent: INode
   }
 }
 
-function treatAsMatch(destination: INode, source: INode) {
+function treatAsMatch(destination: INode, source: INode, getDestinationChildren: (parent: INode) => INodeRange, getSourceChildren: (parent: INode) => INodeRange) {
   switch (destination.nodeType) {
     case Node.TEXT_NODE:
     case Node.COMMENT_NODE:
@@ -82,7 +92,7 @@ function treatAsMatch(destination: INode, source: INode) {
       const editableElementValue = getEditableElementValue(source as Element);
       synchronizeAttributes(destination as Element, source as Element);
       applyAnyDeferredValue(destination as Element);
-      synchronizeDomContent(toINodeRange(destination as Element), toINodeRange(source as Element));
+      synchronizeDomContent(getDestinationChildren(destination), getSourceChildren(source));
 
       // This is a much simpler alternative to the deferred-value-assignment logic we use in interactive rendering.
       // Because this sync algorithm goes depth-first, we know all the attributes and descendants are fully in sync
