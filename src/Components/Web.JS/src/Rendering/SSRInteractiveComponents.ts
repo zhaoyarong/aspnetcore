@@ -1,6 +1,6 @@
 import { ComponentDescriptor, ServerComponentDescriptor, WebAssemblyComponentDescriptor, blazorCommentRegularExpression, discoverComponents } from '../Services/ComponentDescriptorDiscovery';
 import { synchronizeDomContent, INode, INodeRange } from './DomMerging/DomSync';
-import { LogicalElement, getLogicalRootDescriptor, toLogicalRootCommentElement } from './LogicalElements';
+import { LogicalElement, getLogicalChild, getLogicalNextSibling, getLogicalRootDescriptor, insertLogicalChild, insertLogicalChildBefore, isLogicalElement, toLogicalElement, toLogicalRootCommentElement } from './LogicalElements';
 
 let descriptorHandler: (descriptor: ComponentDescriptor) => void | undefined;
 
@@ -52,7 +52,7 @@ function upgradeComponentCommentsToLogicalRootComments(root: Node): ComponentDes
   return allDescriptors;
 }
 
-export class LogicalNodeRangeIterator implements Iterator<INode, null> {
+export class PhysicalNodeRangeIterator implements Iterator<INode, null> {
   private nextVal: Node | null;
   private endMarker: Comment | null;
 
@@ -84,20 +84,62 @@ export class LogicalNodeRangeIterator implements Iterator<INode, null> {
   }
 }
 
+class LogicalNodeRangeIterator implements Iterator<INode, null> {
+  private nextVal: LogicalElement | null;
+  constructor(private parent: LogicalElement) {
+    this.nextVal = getLogicalChild(this.parent, 0);
+  }
+  next(): IteratorResult<INode, null> {
+    if (!this.nextVal) {
+      return { value: null, done: true };
+    } else {
+      const result = this.nextVal!;
+
+      const componentMarker = result && parseComponentMarker(result as any as Node);
+      if (componentMarker) {
+        this.nextVal = getLogicalNextSibling(componentMarker.nextSibling as any as LogicalElement);
+      } else {
+        // TODO: Make more performant
+        this.nextVal = getLogicalNextSibling(result);
+      }
+
+      return { value: result as any as Node, done: false };
+    }
+  }
+}
+
 function toINodeRange(container: CommentBoundedRange | Node): INodeRange {
   const parentNode = container instanceof Node ? container : container.startExclusive.parentNode!;
   return {
     [Symbol.iterator](): Iterator<INode, null> {
-      return new LogicalNodeRangeIterator(container);
+      return isLogicalElement(parentNode) ? new LogicalNodeRangeIterator(parentNode as any as LogicalElement) : new PhysicalNodeRangeIterator(container);
     },
-    remove(node) {
-      parentNode.removeChild(node as Node);
+    remove(nodeToDelete) {
+      if (isLogicalElement(parentNode)) {
+        // It's not safe to call 'removeLogicalChild' here because it recursively removes
+        // logical descendants from their parents, and that can potentially interfere with
+        // renderer-managed DOM. Instead, we insert the logical element into a new document
+        // fragment, which allows the renderer to continue applying render batches until
+        // related components get disposed.
+        // TODO: Don't really do this. Instead, we should actually tell BrowserRenderer right
+        // now to untrack any associated root component for this node, and then if it later
+        // receives renderbatch content for that component, it should no-op. That would save
+        // us from doing invisible render updates and creating document fragments here.
+        const docFrag = toLogicalElement(document.createDocumentFragment());
+        insertLogicalChild(nodeToDelete as Node, docFrag, 0);
+      } else {
+        parentNode.removeChild(nodeToDelete as Node);
+      }
     },
     insertBefore(node, before) {
       if (!before && !(container instanceof Node)) {
         before = container.endExclusive;
       }
-      parentNode.insertBefore(node as Node, before as Node);
+      if (isLogicalElement(parentNode)) {
+        insertLogicalChildBefore(node as Node, parentNode as any as LogicalElement, before as any as LogicalElement);
+      } else {
+        parentNode.insertBefore(node as Node, before as Node);
+      }
     },
     getChildren(parent) {
       return toINodeRange(parent as Node);

@@ -1,6 +1,6 @@
 import { expect, test, describe } from '@jest/globals';
 import { synchronizeDomContent as synchronizeDomContentCore, INode, INodeRange } from '../src/Rendering/DomMerging/DomSync';
-import { CommentBoundedRange, LogicalNodeRangeIterator } from '../src/Rendering/SSRInteractiveComponents';
+import { CommentBoundedRange, PhysicalNodeRangeIterator } from '../src/Rendering/SSRInteractiveComponents';
 
 function synchronizeDomContent(destination: CommentBoundedRange | Node, newContent: Node) {
   synchronizeDomContentCore(toINodeRange(destination), toINodeRange(newContent));
@@ -604,7 +604,7 @@ function toINodeRange(container: Node | CommentBoundedRange): INodeRange {
   const parentNode = container instanceof Node ? container : container.startExclusive.parentNode!;
   return {
     [Symbol.iterator](): Iterator<INode, null> {
-      return new LogicalNodeRangeIterator(container);
+      return new PhysicalNodeRangeIterator(container);
     },
     remove(node) {
       parentNode.removeChild(node as Node);
