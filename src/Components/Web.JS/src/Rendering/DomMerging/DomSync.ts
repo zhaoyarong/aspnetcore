@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 import { applyAnyDeferredValue } from '../DomSpecialPropertyUtil';
+import { isLogicalElement } from '../LogicalElements';
 import { synchronizeAttributes } from './AttributeSync';
 import { UpdateCost, ItemList, Operation, computeEditScript } from './EditScript';
 
@@ -114,6 +115,9 @@ function treatAsSubstitution(destination: INode, source: INode) {
   switch (destination.nodeType) {
     case Node.TEXT_NODE:
     case Node.COMMENT_NODE:
+      if (isLogicalElement(destination as Node)) {
+        console.log('TODO: Update the interactive component using this new marker comment');
+      }
       (destination as Text).textContent = (source as Text).textContent;
       break;
     default:
@@ -129,6 +133,11 @@ function domNodeComparer(a: INode, b: INode): UpdateCost {
   switch (a.nodeType) {
     case Node.TEXT_NODE:
     case Node.COMMENT_NODE:
+      // TODO: If one is a LogicalElement representing an interactive component, and the other is a marker comment,
+      // then the update cost should be:
+      // - zero if they represent components of compatible types and keys (so we hit treatAsMatch for them)
+      // - infinite otherwise (so we never try to map this marker into this existing interactive component)
+
       // We're willing to update text and comment nodes in place, but treat the update operation as being
       // as costly as an insertion or deletion
       return a.textContent === b.textContent ? UpdateCost.None : UpdateCost.Some;

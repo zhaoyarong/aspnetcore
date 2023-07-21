@@ -1,6 +1,6 @@
 import { ComponentDescriptor, ServerComponentDescriptor, WebAssemblyComponentDescriptor, blazorCommentRegularExpression, discoverComponents } from '../Services/ComponentDescriptorDiscovery';
 import { synchronizeDomContent, INode, INodeRange } from './DomMerging/DomSync';
-import { LogicalElement, getLogicalChild, getLogicalNextSibling, getLogicalRootDescriptor, insertLogicalChild, insertLogicalChildBefore, isLogicalElement, toLogicalElement, toLogicalRootCommentElement } from './LogicalElements';
+import { LogicalElement, getLogicalChildrenArray, getLogicalNextSibling, getLogicalRootDescriptor, insertLogicalChild, insertLogicalChildBefore, isLogicalElement, toLogicalElement, toLogicalRootCommentElement } from './LogicalElements';
 
 let descriptorHandler: (descriptor: ComponentDescriptor) => void | undefined;
 
@@ -85,9 +85,13 @@ export class PhysicalNodeRangeIterator implements Iterator<INode, null> {
 }
 
 class LogicalNodeRangeIterator implements Iterator<INode, null> {
+  private readonly logicalChildrenArray: LogicalElement[];
   private nextVal: LogicalElement | null;
+  private nextValIndex: number;
   constructor(private parent: LogicalElement) {
-    this.nextVal = getLogicalChild(this.parent, 0);
+    this.logicalChildrenArray = getLogicalChildrenArray(this.parent);
+    this.nextValIndex = 0;
+    this.nextVal = this.logicalChildrenArray[this.nextValIndex];
   }
   next(): IteratorResult<INode, null> {
     if (!this.nextVal) {
@@ -99,8 +103,14 @@ class LogicalNodeRangeIterator implements Iterator<INode, null> {
       if (componentMarker) {
         this.nextVal = getLogicalNextSibling(componentMarker.nextSibling as any as LogicalElement);
       } else {
-        // TODO: Make more performant
-        this.nextVal = getLogicalNextSibling(result);
+        if (this.logicalChildrenArray[this.nextValIndex] !== this.nextVal) {
+          // We don't know the index, so rescan. The array must have been edited. That's OK as long as it's not 'nextVal' that was removed.
+          this.nextValIndex = this.logicalChildrenArray.indexOf(this.nextVal);
+          if (this.nextValIndex < 0) {
+            throw new Error('LogicalNodeRangeIterator cannot find the current iteration value in the current set of children');
+          }
+        }
+        this.nextVal = this.logicalChildrenArray[++this.nextValIndex];
       }
 
       return { value: result as any as Node, done: false };
@@ -135,6 +145,12 @@ function toINodeRange(container: CommentBoundedRange | Node): INodeRange {
       if (!before && !(container instanceof Node)) {
         before = container.endExclusive;
       }
+
+      const possibleComponentMarker = parseComponentMarker(node as Node);
+      if (possibleComponentMarker) {
+        console.log('TODO: Insert a new interactive element using this marker', node);
+      }
+
       if (isLogicalElement(parentNode)) {
         insertLogicalChildBefore(node as Node, parentNode as any as LogicalElement, before as any as LogicalElement);
       } else {
