@@ -1,5 +1,6 @@
 import { ComponentDescriptor, ServerComponentDescriptor, WebAssemblyComponentDescriptor, discoverComponents } from '../Services/ComponentDescriptorDiscovery';
-import { CommentBoundedRange, synchronizeDomContent, toINodeRange } from './DomMerging/DomSync';
+import { synchronizeDomContent } from './DomMerging/DomSync';
+import { CommentBoundedRange, toINodeRange } from './DomMerging/NodeRange';
 import { LogicalElement, getLogicalRootDescriptor, toLogicalRootCommentElement } from './LogicalElements';
 
 let descriptorHandler: (descriptor: ComponentDescriptor) => void | undefined;

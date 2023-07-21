@@ -1,5 +1,10 @@
 import { expect, test, describe } from '@jest/globals';
-import { CommentBoundedRange, synchronizeDomContent } from '../src/Rendering/DomMerging/DomSync';
+import { synchronizeDomContent as synchronizeDomContentCore } from '../src/Rendering/DomMerging/DomSync';
+import { CommentBoundedRange, toINodeRange } from '../src/Rendering/DomMerging/NodeRange';
+
+function synchronizeDomContent(destination: CommentBoundedRange | Node, newContent: Node) {
+  synchronizeDomContentCore(toINodeRange(destination), toINodeRange(newContent));
+}
 
 describe('DomSync', () => {
   test('should remove everything if new content is empty', () => {

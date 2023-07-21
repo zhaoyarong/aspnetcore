@@ -4,98 +4,13 @@
 import { applyAnyDeferredValue } from '../DomSpecialPropertyUtil';
 import { synchronizeAttributes } from './AttributeSync';
 import { UpdateCost, ItemList, Operation, computeEditScript } from './EditScript';
+import { INode, INodeRange, toINodeRange } from './NodeRange';
 
-interface INode {
-  readonly nodeType: number;
-  textContent: string | null;
-}
-
-interface INodeRange extends Iterable<INode> {
-  insertBefore(nodeToInsert: INode, beforeExistingNode: INode | null): void;
-  remove(node: INode): void;
-}
-
-class NodeIterator implements Iterator<INode, null> {
-  private nextVal: Node | null;
-  constructor(parent: Node) {
-    this.nextVal = parent.firstChild;
-  }
-  next(): IteratorResult<INode, null> {
-    const result = this.nextVal;
-    this.nextVal = this.nextVal?.nextSibling || null;
-    return result ? { value: result, done: false } : { value: null, done: true };
-  }
-}
-
-class CommentBoundedRangeIterator implements Iterator<INode, null> {
-  private nextVal: Node;
-  private endMarker: Comment;
-  constructor(range: CommentBoundedRange) {
-    this.nextVal = range.startExclusive.nextSibling!;
-    this.endMarker = range.endExclusive;
-  }
-  next(): IteratorResult<INode, null> {
-    if (this.nextVal === this.endMarker) {
-      return { value: null, done: true };
-    } else {
-      const result = this.nextVal!;
-      this.nextVal = result.nextSibling!;
-      return { value: result, done: false };
-    }
-  }
-}
-
-export function toINodeRange(container: CommentBoundedRange | Node): INodeRange {
-  if (container instanceof Node) {
-    return {
-      [Symbol.iterator](): Iterator<INode, null> {
-        return new NodeIterator(container);
-      },
-      remove(node) {
-        container.removeChild(node as Node);
-      },
-      insertBefore(node, before) {
-        container.insertBefore(node as Node, before as Node);
-      }
-    };
-  } else {
-    return {
-      [Symbol.iterator](): Iterator<INode, null> {
-        return new CommentBoundedRangeIterator(container);
-      },
-      remove(node) {
-        container.startExclusive.parentNode!.removeChild(node as Node);
-      },
-      insertBefore(node, before) {
-        container.startExclusive.parentNode!.insertBefore(node as Node, (before as Node || container.endExclusive));
-      }
-    }
-  }
-}
-
-function toItemList(range: INodeRange): ItemList<INode> {
-  const allNodes: INode[] = [];
-  for (const x of range) {
-    allNodes.push(x);
-  }
-  return new ArrayItemList(allNodes);
-}
-
-export function synchronizeDomContent(destination: INodeRange | CommentBoundedRange | Node, newContent: INodeRange | Node) {
-  if (destination instanceof Node || (destination as CommentBoundedRange).startExclusive) {
-    destination = toINodeRange(destination as CommentBoundedRange | Node);
-  }
-  if (newContent instanceof Node) {
-    newContent = toINodeRange(newContent);
-  }
-  synchronizeDomContentCore(destination as INodeRange, newContent as INodeRange);
-}
-
-export function synchronizeDomContentCore(destination: INodeRange, newContent: INodeRange) {
+export function synchronizeDomContent(destination: INodeRange, newContent: INodeRange) {
   // Run the diff
   const editScript = computeEditScript(
-    toItemList(destination),
-    toItemList(newContent),
+    ArrayItemList.fromNodeRange(destination),
+    ArrayItemList.fromNodeRange(newContent),
     domNodeComparer);
 
   // Handle any common leading items
@@ -167,7 +82,7 @@ function treatAsMatch(destination: INode, source: INode) {
       const editableElementValue = getEditableElementValue(source as Element);
       synchronizeAttributes(destination as Element, source as Element);
       applyAnyDeferredValue(destination as Element);
-      synchronizeDomContentCore(toINodeRange(destination as Element), toINodeRange(source as Element));
+      synchronizeDomContent(toINodeRange(destination as Element), toINodeRange(source as Element));
 
       // This is a much simpler alternative to the deferred-value-assignment logic we use in interactive rendering.
       // Because this sync algorithm goes depth-first, we know all the attributes and descendants are fully in sync
@@ -252,13 +167,16 @@ function getEditableElementValue(elem: Element): string | boolean | number | nul
   }
 }
 
-export interface CommentBoundedRange {
-  startExclusive: Comment,
-  endExclusive: Comment,
-}
-
 // TODO: Instead of pre-evaluating the array, consider changing EditScript not to rely on random access to arbitrary indices
 class ArrayItemList<T> implements ItemList<T> {
+  static fromNodeRange(range: INodeRange): ItemList<INode> {
+    const allNodes: INode[] = [];
+    for (const x of range) {
+      allNodes.push(x);
+    }
+    return new ArrayItemList(allNodes);
+  }
+
   constructor(private items: T[]) {
     this.length = items.length;
   }
