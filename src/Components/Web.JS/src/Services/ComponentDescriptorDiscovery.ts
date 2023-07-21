@@ -15,15 +15,7 @@ function discoverServerComponents(root: Node): ServerComponentDescriptor[] {
   const discoveredComponents: ServerComponentDescriptor[] = [];
   for (let i = 0; i < componentComments.length; i++) {
     const componentComment = componentComments[i];
-    const entry = new ServerComponentDescriptor(
-      componentComment.type,
-      componentComment.start,
-      componentComment.end,
-      componentComment.sequence,
-      componentComment.descriptor,
-      componentComment.key
-    );
-
+    const entry = toServerComponentDescriptor(componentComment);
     discoveredComponents.push(entry);
   }
 
@@ -31,6 +23,17 @@ function discoverServerComponents(root: Node): ServerComponentDescriptor[] {
 }
 
 const blazorStateCommentRegularExpression = /^\s*Blazor-Component-State:(?<state>[a-zA-Z0-9+/=]+)$/;
+
+function toServerComponentDescriptor(componentComment: ServerComponentComment) {
+  return new ServerComponentDescriptor(
+    componentComment.type,
+    componentComment.start,
+    componentComment.end,
+    componentComment.sequence,
+    componentComment.descriptor,
+    componentComment.key
+  );
+}
 
 export function discoverPersistedState(node: Node): string | null | undefined {
   if (node.nodeType === Node.COMMENT_NODE) {
@@ -60,28 +63,37 @@ export function discoverPersistedState(node: Node): string | null | undefined {
 }
 
 function discoverWebAssemblyComponents(node: Node): WebAssemblyComponentDescriptor[] {
-  const componentComments = resolveComponentComments(node, 'webassembly') as WebAssemblyComponentDescriptor[];
+  const componentComments = resolveComponentComments(node, 'webassembly') as WebAssemblyComponentComment[];
   const discoveredComponents: WebAssemblyComponentDescriptor[] = [];
   for (let i = 0; i < componentComments.length; i++) {
     const componentComment = componentComments[i];
-    const entry = new WebAssemblyComponentDescriptor(
-      componentComment.type,
-      componentComment.start,
-      componentComment.end,
-      componentComment.assembly,
-      componentComment.typeName,
-      componentComment.parameterDefinitions,
-      componentComment.parameterValues,
-      componentComment.key
-    );
-
+    const entry = toWebAssemblyComponentDescriptor(componentComment);
     discoveredComponents.push(entry);
   }
 
   return discoveredComponents.sort((a, b): number => a.id - b.id);
 }
 
-interface ComponentComment {
+function toWebAssemblyComponentDescriptor(componentComment: WebAssemblyComponentComment) {
+  return new WebAssemblyComponentDescriptor(
+    componentComment.type,
+    componentComment.start,
+    componentComment.end,
+    componentComment.assembly,
+    componentComment.typeName,
+    componentComment.parameterDefinitions,
+    componentComment.parameterValues,
+    componentComment.key
+  );
+}
+
+export function toComponentDescriptor(componentComment: ComponentComment): ComponentDescriptor {
+  return componentComment.type === 'server'
+    ? toServerComponentDescriptor(componentComment as ServerComponentComment)
+    : toWebAssemblyComponentDescriptor(componentComment as WebAssemblyComponentComment);
+}
+
+export interface ComponentComment {
   type: 'server' | 'webassembly';
   prerenderId?: string;
 }

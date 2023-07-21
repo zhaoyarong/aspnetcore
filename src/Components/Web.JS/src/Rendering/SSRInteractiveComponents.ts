@@ -1,4 +1,4 @@
-import { ComponentDescriptor, ServerComponentDescriptor, WebAssemblyComponentDescriptor, blazorCommentRegularExpression, discoverComponents } from '../Services/ComponentDescriptorDiscovery';
+import { ComponentComment, ComponentDescriptor, ServerComponentDescriptor, WebAssemblyComponentDescriptor, blazorCommentRegularExpression, discoverComponents, toComponentDescriptor } from '../Services/ComponentDescriptorDiscovery';
 import { synchronizeDomContent, INode, INodeRange } from './DomMerging/DomSync';
 import { LogicalElement, getLogicalChildrenArray, getLogicalNextSibling, getLogicalRootDescriptor, insertLogicalChild, insertLogicalChildBefore, isLogicalElement, toLogicalElement, toLogicalRootCommentElement } from './LogicalElements';
 
@@ -17,7 +17,30 @@ export function registerAllComponentDescriptors(root: Node) {
 }
 
 export function synchronizeDomContentAndUpdateInteractiveComponents(destination: CommentBoundedRange | Node, newContent: Node) {
-  synchronizeDomContent(toINodeRange(destination), toINodeRange(newContent));
+  const destinationRange = toINodeRange(destination);
+  synchronizeDomContent(destinationRange, toINodeRange(newContent));
+
+  // Activate any newly-added interactive components
+  forAllComments(destinationRange, comment => {
+    const descriptor = comment['blazorComponentDescriptor'] as ComponentDescriptor | undefined;
+    if (descriptor) {
+      descriptorHandler(descriptor);
+    }
+  });
+}
+
+function forAllComments(range: INodeRange, callback: (Comment) => void) {
+  for (let node of range) {
+    if (node instanceof Comment) {
+      callback(node);
+    } else {
+      const iterator = document.createNodeIterator(node as Node, NodeFilter.SHOW_COMMENT);
+      let comment: Comment | null = null;
+      while (comment = iterator.nextNode() as Comment | null) {
+        callback(comment);
+      }
+    }
+  }
 }
 
 export interface CommentBoundedRange {
@@ -146,9 +169,15 @@ function toINodeRange(container: CommentBoundedRange | Node): INodeRange {
         before = container.endExclusive;
       }
 
-      const possibleComponentMarker = parseComponentMarker(node as Node);
-      if (possibleComponentMarker) {
-        console.log('TODO: Insert a new interactive element using this marker', node);
+      const componentMarker = parseComponentMarker(node as Node);
+      if (componentMarker) {
+        // TODO: Need to get the prerendered content into the output too, not just this placeholder.
+        // Might need that to be part of the postprocessing phase if it confuses the iterator
+        // to insert multiple nodes here.
+        const placeholder = document.createComment('blazor-interactive-component');
+        placeholder['blazorComponentDescriptor'] = componentMarker.descriptor;
+        componentMarker.descriptor.start = placeholder;
+        node = placeholder;
       }
 
       if (isLogicalElement(parentNode)) {
@@ -163,16 +192,17 @@ function toINodeRange(container: CommentBoundedRange | Node): INodeRange {
   };
 }
 
-function parseComponentMarker(node: Node): { nextSibling: Node | null } | null {
+function parseComponentMarker(node: Node): { descriptor: ComponentDescriptor, nextSibling: Node | null } | null {
   if (node.nodeType === Node.COMMENT_NODE && node.textContent) {
     const definition = blazorCommentRegularExpression.exec(node.textContent!);
     const json = definition && definition.groups && definition.groups['descriptor'];
     if (json) {
-      const parsedJson = JSON.parse(json) as { prerenderId?: string };
+      const parsedJson = JSON.parse(json) as ComponentComment;
+      const descriptor = toComponentDescriptor(parsedJson);
       if (parsedJson.prerenderId) {
-        return { nextSibling: getComponentEndComment(node as Comment, parsedJson.prerenderId).nextSibling };
+        return { descriptor, nextSibling: getComponentEndComment(node as Comment, parsedJson.prerenderId).nextSibling };
       } else {
-        return { nextSibling: node.nextSibling };
+        return { descriptor, nextSibling: node.nextSibling };
       }
     }
   }

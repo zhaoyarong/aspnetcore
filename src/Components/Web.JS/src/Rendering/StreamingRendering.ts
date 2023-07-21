@@ -70,6 +70,7 @@ function insertStreamingContentIntoDocument(componentIdAsString: string, docFrag
     const { startMarker, endMarker } = markers;
     if (enableDomPreservation) {
       synchronizeDomContentAndUpdateInteractiveComponents({ startExclusive: startMarker, endExclusive: endMarker }, docFrag);
+      navigationEnhancementCallbacks.documentUpdated();
     } else {
       // In this mode we completely delete the old content before inserting the new content
       const destinationRoot = endMarker.parentNode!;
