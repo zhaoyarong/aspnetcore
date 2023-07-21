@@ -127,7 +127,7 @@ function resolveComponentComments(node: Node, type: 'webassembly' | 'server'): C
   return result;
 }
 
-const blazorCommentRegularExpression = new RegExp(/^\s*Blazor:[^{]*(?<descriptor>.*)$/);
+export const blazorCommentRegularExpression = new RegExp(/^\s*Blazor:[^{]*(?<descriptor>.*)$/);
 
 function getComponentComment(commentNodeIterator: ComponentCommentIterator, type: 'webassembly' | 'server'): ComponentComment | undefined {
   const candidateStart = commentNodeIterator.currentElement;

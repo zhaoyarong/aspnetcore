@@ -1,3 +1,5 @@
+import { blazorCommentRegularExpression } from '../../Services/ComponentDescriptorDiscovery';
+
 export interface INode {
   readonly nodeType: number;
   textContent: string | null;
@@ -20,7 +22,14 @@ class NodeIterator implements Iterator<INode, null> {
   }
   next(): IteratorResult<INode, null> {
     const result = this.nextVal;
-    this.nextVal = this.nextVal?.nextSibling || null;
+
+    const componentMarker = result && parseComponentMarker(result);
+    if (componentMarker) {
+      this.nextVal = componentMarker.nextSibling;
+    } else {
+      this.nextVal = this.nextVal?.nextSibling || null;
+    }
+
     return result ? { value: result, done: false } : { value: null, done: true };
   }
 }
@@ -37,7 +46,14 @@ class CommentBoundedRangeIterator implements Iterator<INode, null> {
       return { value: null, done: true };
     } else {
       const result = this.nextVal!;
-      this.nextVal = result.nextSibling!;
+
+      const componentMarker = result && parseComponentMarker(result);
+      if (componentMarker) {
+        this.nextVal = componentMarker.nextSibling!;
+      } else {
+        this.nextVal = result.nextSibling!;
+      }
+
       return { value: result, done: false };
     }
   }
@@ -69,4 +85,38 @@ export function toINodeRange(container: CommentBoundedRange | Node): INodeRange 
       }
     }
   }
+}
+
+function parseComponentMarker(node: Node): { nextSibling: Node | null } | null {
+  if (node.nodeType === Node.COMMENT_NODE && node.textContent) {
+    const definition = blazorCommentRegularExpression.exec(node.textContent!);
+    const json = definition && definition.groups && definition.groups['descriptor'];
+    if (json) {
+      const parsedJson = JSON.parse(json) as { prerenderId?: string };
+      if (parsedJson.prerenderId) {
+        return { nextSibling: getComponentEndComment(node as Comment, parsedJson.prerenderId).nextSibling };
+      } else {
+        return { nextSibling: node.nextSibling };
+      }
+    }
+  }
+
+  return null;
+}
+
+function getComponentEndComment(startComment: Comment, prerenderId: string): Node {
+  for (let candidateEndNode = startComment.nextSibling; candidateEndNode; candidateEndNode = candidateEndNode?.nextSibling) {
+    if (candidateEndNode.nodeType === Node.COMMENT_NODE && candidateEndNode.textContent) {
+      const definition = blazorCommentRegularExpression.exec(candidateEndNode.textContent!);
+      const json = definition && definition[1];
+      if (json) {
+        const parsedJson = JSON.parse(json) as { prerenderId?: string };
+        if (parsedJson.prerenderId === prerenderId) {
+          return candidateEndNode;
+        }
+      }
+    }
+  }
+
+  throw new Error(`No matching end comment for prerender ${prerenderId}`);
 }
