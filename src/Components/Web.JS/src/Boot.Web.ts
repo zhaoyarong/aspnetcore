@@ -20,8 +20,8 @@ import { WebAssemblyComponentDescriptor } from './Services/ComponentDescriptorDi
 import { ServerComponentDescriptor } from './Services/ComponentDescriptorDiscovery';
 import { RootComponentManager } from './Services/RootComponentManager';
 import { WebRendererId } from './Rendering/WebRendererId';
-import { DescriptorHandler, attachComponentDescriptorHandler, registerAllComponentDescriptors } from './Rendering/DomMerging/DomSync';
 import { waitForRendererAttached } from './Rendering/WebRendererInteropMethods';
+import { attachComponentDescriptorHandler, registerAllComponentDescriptors } from './Rendering/SSRInteractiveComponents';
 
 let started = false;
 let webStartOptions: Partial<WebStartOptions> | undefined;
@@ -40,11 +40,7 @@ function boot(options?: Partial<WebStartOptions>) : Promise<void> {
     documentUpdated: handleUpdatedComponentDescriptors,
   };
 
-  const descriptorHandler: DescriptorHandler = {
-    registerComponentDescriptor,
-  };
-
-  attachComponentDescriptorHandler(descriptorHandler);
+  attachComponentDescriptorHandler(registerComponentDescriptor);
   attachStreamingRenderingListener(options?.ssr, navigationEnhancementCallbacks);
 
   if (!options?.ssr?.disableDomPreservation) {

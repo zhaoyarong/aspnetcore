@@ -217,6 +217,7 @@ export function getLogicalChild(parent: LogicalElement, childIndex: number): Log
   return getLogicalChildrenArray(parent)[childIndex];
 }
 
+// TODO: Remove
 export function getLogicalRootDescriptor(element: LogicalElement): ServerComponentDescriptor | WebAssemblyComponentDescriptor {
   return element[logicalRootDescriptorPropname] || null;
 }
