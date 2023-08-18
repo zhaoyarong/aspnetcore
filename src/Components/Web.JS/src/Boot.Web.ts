@@ -20,7 +20,7 @@ import { WebRootComponentManager } from './Services/WebRootComponentManager';
 import { attachComponentDescriptorHandler, registerAllComponentDescriptors } from './Rendering/DomMerging/DomSync';
 
 let started = false;
-const rootComponentManager = new WebRootComponentManager();
+let rootComponentManager: WebRootComponentManager;
 
 function boot(options?: Partial<WebStartOptions>) : Promise<void> {
   if (started) {
@@ -33,6 +33,8 @@ function boot(options?: Partial<WebStartOptions>) : Promise<void> {
 
   setCircuitOptions(options?.circuit);
   setWebAssemblyOptions(options?.webAssembly);
+
+  rootComponentManager = new WebRootComponentManager(options?.ssr?.circuitInactivityTimeoutMs ?? 2000);
 
   attachComponentDescriptorHandler(rootComponentManager);
   attachStreamingRenderingListener(options?.ssr, rootComponentManager);
