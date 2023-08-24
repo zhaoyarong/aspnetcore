@@ -1,12 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.AspNetCore.Routing;
-
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The response type for the "/resetPassword" endpoint add by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApi"/>.
+/// The response type for the "/resetPassword" endpoint add by MapIdentityApi.
 /// The "/resetPassword" endpoint requires the "/forgotPassword" endpoint to be called first to get the <see cref="ResetCode"/>.
 /// </summary>
 public sealed class ResetPasswordRequest

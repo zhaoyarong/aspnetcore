@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The response type for the "/manage/info" endpoints add by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApi"/>.
+/// The response type for the "/manage/info" endpoints add by MapIdentityApi.
 /// </summary>
 public sealed class InfoResponse
 {
@@ -23,7 +22,7 @@ public sealed class InfoResponse
     public required bool IsEmailConfirmed { get; init; }
 
     /// <summary>
-    /// The <see cref="ClaimsPrincipal.Claims"/> from the authenticated <see cref="HttpContext.User"/>.
+    /// The <see cref="ClaimsPrincipal.Claims"/> from the authenticated user.
     /// </summary>
     public required IDictionary<string, string> Claims { get; init; }
 }

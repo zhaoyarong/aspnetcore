@@ -1,12 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.AspNetCore.Routing;
-
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The request type for the "/manage/2fa" endpoint add by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApi"/>.
+/// The request type for the "/manage/2fa" endpoint add by MapIdentityApi.
 /// </summary>
 public sealed class TwoFactorRequest
 {
