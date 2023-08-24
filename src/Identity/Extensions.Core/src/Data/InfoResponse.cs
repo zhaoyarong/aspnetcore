@@ -7,7 +7,7 @@ using System.Security.Claims;
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The response type for the "/manage/info" endpoints add by MapIdentityApi.
+/// The response type for the "/manage/info" endpoints added by MapIdentityApi.
 /// </summary>
 public sealed class InfoResponse
 {

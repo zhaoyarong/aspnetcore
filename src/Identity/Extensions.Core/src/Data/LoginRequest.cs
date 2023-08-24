@@ -4,7 +4,7 @@
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The request type for the "/login" endpoint add by MapIdentityApi.
+/// The request type for the "/login" endpoint added by MapIdentityApi.
 /// </summary>
 public sealed class LoginRequest
 {
@@ -20,7 +20,7 @@ public sealed class LoginRequest
 
     /// <summary>
     /// The optional two-factor authenticator code. This may be required for users who have enabled two-factor authentication.
-    /// This is not required if a <see cref="TwoFactorCode"/> is sent.
+    /// This is not required if a <see cref="TwoFactorRecoveryCode"/> is sent.
     /// </summary>
     public string? TwoFactorCode { get; init; }
 

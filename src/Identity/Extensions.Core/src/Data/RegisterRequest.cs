@@ -4,7 +4,7 @@
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The request type for the "/register" endpoint add by MapIdentityApi.
+/// The request type for the "/register" endpoint added by MapIdentityApi.
 /// </summary>
 public sealed class RegisterRequest
 {

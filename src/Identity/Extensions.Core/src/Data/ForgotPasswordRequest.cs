@@ -4,7 +4,7 @@
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The response type for the "/forgotPassword" endpoint add by MapIdentityApi.
+/// The response type for the "/forgotPassword" endpoint added by MapIdentityApi.
 /// </summary>
 public sealed class ForgotPasswordRequest
 {

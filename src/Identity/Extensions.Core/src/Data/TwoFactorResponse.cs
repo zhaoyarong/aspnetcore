@@ -4,7 +4,7 @@
 namespace Microsoft.AspNetCore.Identity.Data;
 
 /// <summary>
-/// The response type for the "/manage/2fa" endpoint add by MapIdentityApi.
+/// The response type for the "/manage/2fa" endpoint added by MapIdentityApi.
 /// </summary>
 public sealed class TwoFactorResponse
 {
